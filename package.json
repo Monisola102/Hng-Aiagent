@@ -1,0 +1,28 @@
+{
+  "name": "src",
+  "version": "1.0.0",
+  "description": "AI agent that provides nutritional and health benefits of foods using Mastra.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "mastra dev",
+    "start": "node index.js",
+    "build": "mastra build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Oyewole Monisola",
+  "license": "ISC",
+  "dependencies": {
+    "@mastra/core": "^0.23.1",
+    "@mastra/libsql": "^0.16.1",
+    "@mastra/loggers": "^0.10.18",
+    "@mastra/memory": "^0.15.9",
+    "axios": "^1.13.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "mastra": "^0.17.7"
+  }
+}
