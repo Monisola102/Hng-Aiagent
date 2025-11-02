@@ -8,11 +8,10 @@ import { PinoLogger } from '@mastra/loggers';
 import { LibSQLStore } from '@mastra/libsql';
 import { Agent, tryGenerateWithJsonFallback, tryStreamWithJsonFallback, MessageList, convertMessages } from '@mastra/core/agent';
 import { Memory as Memory$1 } from '@mastra/memory';
-import { foodInfoTool } from './tools/d09f2f8a-6fca-4d2f-8f30-e657aafdd60d.mjs';
+import { f as foodInfoTool, s as settings } from './food-info-tool.mjs';
 import { join, resolve as resolve$2, dirname, extname, basename, isAbsolute, relative } from 'path';
 import { registerApiRoute } from '@mastra/core/server';
 import crypto$1, { randomUUID } from 'crypto';
-import dotenv from 'dotenv';
 import { readdir, readFile, mkdtemp, rm, writeFile, mkdir, copyFile, stat } from 'fs/promises';
 import * as https from 'https';
 import { join as join$1 } from 'path/posix';
@@ -42,6 +41,7 @@ import { createRequire } from 'module';
 import { tmpdir } from 'os';
 import { createWorkflow, createStep } from '@mastra/core/workflows';
 import { tools } from './tools.mjs';
+import 'dotenv';
 
 
 // -- Shims --
@@ -70,8 +70,7 @@ const nutritionAgent = new Agent({
   })
 });
 
-dotenv.config();
-const SPOONACULAR_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+const SPOONACULAR_API_KEY = settings.spoonacularKey;
 const foodInfoAgentRoute = registerApiRoute("/a2a/agent/food-info/:agentId", {
   method: "POST",
   handler: async (c) => {

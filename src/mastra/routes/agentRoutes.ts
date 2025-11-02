@@ -1,10 +1,9 @@
 import { registerApiRoute } from "@mastra/core/server";
 import { randomUUID } from "crypto";
-import dotenv from "dotenv";
+import { settings } from "../config/settings";
 
-dotenv.config();
 
-const SPOONACULAR_API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+const SPOONACULAR_API_KEY = settings.spoonacularKey;
 
 interface Nutrient {
     name: string;

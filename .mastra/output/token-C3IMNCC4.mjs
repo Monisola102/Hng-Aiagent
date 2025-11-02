@@ -10,7 +10,7 @@ import '@mastra/loggers';
 import '@mastra/libsql';
 import '@mastra/core/agent';
 import '@mastra/memory';
-import './tools/d09f2f8a-6fca-4d2f-8f30-e657aafdd60d.mjs';
+import './food-info-tool.mjs';
 import '@mastra/core/tools';
 import 'zod';
 import 'dotenv';
