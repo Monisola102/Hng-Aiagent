@@ -2,37 +2,26 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { settings } from "../config/settings";
 
+const USDA_API_KEY = settings.usdaKey;
 
-
-const SPOONACULAR_API_KEY = settings.spoonacularKey;
-
-if (!SPOONACULAR_API_KEY) {
-  throw new Error(
-    "GOOGLE_GENERATIVE_AI_API_KEY is missing from your environment variables."
-  );
+if (!USDA_API_KEY) {
+  throw new Error("USDA_API_KEY is missing from your environment variables.");
 }
 
 interface Nutrient {
-  name: string;
-  amount: number;
-  unit: string;
+  nutrientName: string;
+  value: number;
+  unitName: string;
 }
 
-interface Ingredient {
-  id: number;
-  name: string;
-  image: string;
+interface FoodItem {
+  description: string;
+  fdcId: number;
+  foodNutrients: Nutrient[];
 }
 
-interface SearchData {
-  results: Ingredient[];
-}
-
-interface NutritionData {
-  nutrition: {
-    nutrients: Nutrient[];
-  };
-  name: string;
+interface SearchResponse {
+  foods: FoodItem[];
 }
 
 interface FoodInfoResult {
@@ -41,16 +30,15 @@ interface FoodInfoResult {
   protein: string;
   fat: string;
   carbs: string;
-  vitamins: string[] | undefined;
-  minerals: string[] | undefined;
+  vitamins?: string[];
+  minerals?: string[];
   healthBenefits: string[];
-  image: string;
 }
 
-const foodInfoTool = createTool({
-  id: "get-food-info-dynamic",
+export const foodInfoTool = createTool({
+  id: "get-food-info-usda",
   description:
-    "Fetch nutritional information, vitamins, minerals, and dynamic health benefits for any food using Spoonacular API",
+    "Fetch nutritional information, vitamins, minerals, and health benefits for any food using the USDA FoodData Central API",
   inputSchema: z.object({
     food: z.string().describe("Name of the food to look up"),
   }),
@@ -63,45 +51,44 @@ const foodInfoTool = createTool({
     vitamins: z.array(z.string()).optional(),
     minerals: z.array(z.string()).optional(),
     healthBenefits: z.array(z.string()).optional(),
-    image: z.string().optional(),
   }),
   execute: async ({ context }): Promise<FoodInfoResult> => {
-    const query = encodeURIComponent(context.food);
-    const searchRes = await fetch(
-      `https://api.spoonacular.com/food/ingredients/search?query=${query}&apiKey=${SPOONACULAR_API_KEY}`
-    );
-    const searchData = await searchRes.json() as SearchData;
-    if (!searchData.results?.[0])
-      throw new Error(`No results found for "${context.food}"`);
+    const query = encodeURIComponent(context.food.trim().toLowerCase());
+    const searchUrl = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${query}&pageSize=1&api_key=${USDA_API_KEY}`;
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) throw new Error(`USDA API search failed for "${context.food}"`);
+    const searchData = (await searchRes.json()) as SearchResponse;
 
-    const ingredient = searchData.results[0];
-    const infoRes = await fetch(
-      `https://api.spoonacular.com/food/ingredients/${ingredient.id}/information?amount=100&unit=grams&apiKey=${SPOONACULAR_API_KEY}`
-    );
-    const infoData = await infoRes.json() as NutritionData;
-    const nutrients = infoData.nutrition?.nutrients || [];
-    const calories = nutrients.find((n) => n.name === "Calories")?.amount || 0;
-    const protein = nutrients.find((n) => n.name === "Protein")?.amount + " g";
-    const fat = nutrients.find((n) => n.name === "Fat")?.amount + " g";
+    if (!searchData.foods || searchData.foods.length === 0)
+      throw new Error(`No USDA data found for "${context.food}"`);
+
+    const food = searchData.foods[0];
+    const nutrients = food.foodNutrients || [];
+    const calories =
+      nutrients.find((n) => n.nutrientName.toLowerCase().includes("energy"))?.value || 0;
+    const protein =
+      (nutrients.find((n) => n.nutrientName.toLowerCase().includes("protein"))?.value || 0) +
+      " g";
+    const fat =
+      (nutrients.find((n) => n.nutrientName.toLowerCase().includes("total lipid"))?.value ||
+        0) + " g";
     const carbs =
-      nutrients.find((n) => n.name === "Carbohydrates")?.amount + " g";
+      (nutrients.find((n) => n.nutrientName.toLowerCase().includes("carbohydrate"))?.value ||
+        0) + " g";
+
+    // Step 3: extract vitamins & minerals
     const vitamins = nutrients
-      .filter((n) => n.name.startsWith("Vitamin"))
-      .map((v) => `${v.name}: ${v.amount}${v.unit}`);
+      .filter((n) => n.nutrientName.startsWith("Vitamin"))
+      .map((v) => `${v.nutrientName}: ${v.value}${v.unitName}`);
+
     const minerals = nutrients
       .filter((n) =>
-        [
-          "Iron",
-          "Calcium",
-          "Potassium",
-          "Magnesium",
-          "Zinc",
-          "Phosphorus",
-        ].some((m) => n.name.includes(m))
+        ["Iron", "Calcium", "Potassium", "Magnesium", "Zinc", "Phosphorus"].some((m) =>
+          n.nutrientName.includes(m)
+        )
       )
-      .map((n) => `${n.name}: ${n.amount}${n.unit}`);
+      .map((m) => `${m.nutrientName}: ${m.value}${m.unitName}`);
     const healthBenefits: string[] = [];
-
     if (calories < 50)
       healthBenefits.push("Low in calories, good for weight management");
     if (vitamins.find((v) => v.includes("Vitamin C")))
@@ -110,12 +97,11 @@ const foodInfoTool = createTool({
       healthBenefits.push("High in Potassium, supports heart health");
     if (minerals.find((m) => m.includes("Calcium")))
       healthBenefits.push("Contains Calcium, supports bone health");
-
     if (healthBenefits.length === 0)
-      healthBenefits.push("General source of nutrients and minerals");
+      healthBenefits.push("Provides essential nutrients and energy");
 
     return {
-      foodName: infoData.name || ingredient.name,
+      foodName: food.description,
       calories,
       protein,
       fat,
@@ -123,9 +109,6 @@ const foodInfoTool = createTool({
       vitamins: vitamins.length ? vitamins : undefined,
       minerals: minerals.length ? minerals : undefined,
       healthBenefits,
-      image: `https://spoonacular.com/cdn/ingredients_500x500/${ingredient.image}`,
     };
   },
 });
-
-export { foodInfoTool };

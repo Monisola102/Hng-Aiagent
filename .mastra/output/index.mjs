@@ -70,7 +70,7 @@ const nutritionAgent = new Agent({
   })
 });
 
-const SPOONACULAR_API_KEY = settings.spoonacularKey;
+const USDA_API_KEY = settings.usdaKey;
 const foodInfoAgentRoute = registerApiRoute("/a2a/agent/food-info/:agentId", {
   method: "POST",
   handler: async (c) => {
@@ -119,33 +119,31 @@ const foodInfoAgentRoute = registerApiRoute("/a2a/agent/food-info/:agentId", {
       const response = await agent.generate(mastraMessages, async () => {
         const query = messagesList[0]?.parts?.[0]?.text || "apple";
         const encodedQuery = encodeURIComponent(query);
-        const searchRes = await fetch(
-          `https://api.spoonacular.com/food/ingredients/search?query=${encodedQuery}&apiKey=${SPOONACULAR_API_KEY}`
-        );
+        const searchUrl = `https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodedQuery}&pageSize=1&api_key=${USDA_API_KEY}`;
+        const searchRes = await fetch(searchUrl);
         const searchData = await searchRes.json();
-        if (!searchData.results?.[0])
+        if (!searchData.foods?.[0])
           throw new Error(`No results found for "${query}"`);
-        const ingredient = searchData.results[0];
-        const infoRes = await fetch(
-          `https://api.spoonacular.com/food/ingredients/${ingredient.id}/information?amount=100&unit=grams&apiKey=${SPOONACULAR_API_KEY}`
-        );
-        const infoData = await infoRes.json();
-        const nutrients = infoData.nutrition?.nutrients || [];
-        const calories = nutrients.find((n) => n.name === "Calories")?.amount || 0;
-        const protein = nutrients.find((n) => n.name === "Protein")?.amount + " g";
-        const fat = nutrients.find((n) => n.name === "Fat")?.amount + " g";
-        const carbs = nutrients.find((n) => n.name === "Carbohydrates")?.amount + " g";
-        const vitamins = nutrients.filter((n) => n.name.startsWith("Vitamin")).map((v) => `${v.name}: ${v.amount}${v.unit}`);
+        const food = searchData.foods[0];
+        const nutrients = food.foodNutrients || [];
+        const calories = nutrients.find(
+          (n) => n.nutrientName.toLowerCase().includes("energy")
+        )?.value || 0;
+        const protein = (nutrients.find(
+          (n) => n.nutrientName.toLowerCase().includes("protein")
+        )?.value || 0) + " g";
+        const fat = (nutrients.find(
+          (n) => n.nutrientName.toLowerCase().includes("total lipid")
+        )?.value || 0) + " g";
+        const carbs = (nutrients.find(
+          (n) => n.nutrientName.toLowerCase().includes("carbohydrate")
+        )?.value || 0) + " g";
+        const vitamins = nutrients.filter((n) => n.nutrientName.startsWith("Vitamin")).map((v) => `${v.nutrientName}: ${v.value}${v.unitName}`);
         const minerals = nutrients.filter(
-          (n) => [
-            "Iron",
-            "Calcium",
-            "Potassium",
-            "Magnesium",
-            "Zinc",
-            "Phosphorus"
-          ].some((m) => n.name.includes(m))
-        ).map((n) => `${n.name}: ${n.amount}${n.unit}`);
+          (n) => ["Iron", "Calcium", "Potassium", "Magnesium", "Zinc", "Phosphorus"].some(
+            (m) => n.nutrientName.includes(m)
+          )
+        ).map((m) => `${m.nutrientName}: ${m.value}${m.unitName}`);
         const healthBenefits = [];
         if (calories < 50)
           healthBenefits.push("Low in calories, good for weight management");
@@ -158,15 +156,14 @@ const foodInfoAgentRoute = registerApiRoute("/a2a/agent/food-info/:agentId", {
         if (healthBenefits.length === 0)
           healthBenefits.push("General source of nutrients and minerals");
         return {
-          foodName: infoData.name || ingredient.name,
+          foodName: food.description,
           calories,
           protein,
           fat,
           carbs,
           vitamins: vitamins.length ? vitamins : void 0,
           minerals: minerals.length ? minerals : void 0,
-          healthBenefits,
-          image: `https://spoonacular.com/cdn/ingredients_500x500/${ingredient.image}`
+          healthBenefits
         };
       });
       const agentText = `Nutritional info for ${response.text.foodName || "food"} fetched successfully.`;
