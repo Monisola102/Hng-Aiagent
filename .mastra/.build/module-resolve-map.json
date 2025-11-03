@@ -1,10 +1,1 @@
-{
-  "C:\\Users\\Oyewo\\OneDrive\\Desktop\\HNG-AIagent\\.mastra\\.build\\typescript.mjs": {},
-  "C:\\Users\\Oyewo\\OneDrive\\Desktop\\HNG-AIagent\\.mastra\\.build\\@mastra-loggers.mjs": {
-    "pino": "C:\\Users\\Oyewo\\OneDrive\\Desktop\\HNG-AIagent\\node_modules\\@mastra\\loggers\\dist\\index.js",
-    "pino-pretty": "C:\\Users\\Oyewo\\OneDrive\\Desktop\\HNG-AIagent\\node_modules\\@mastra\\loggers\\dist\\index.js"
-  },
-  "C:\\Users\\Oyewo\\OneDrive\\Desktop\\HNG-AIagent\\.mastra\\.build\\@mastra-libsql.mjs": {
-    "@libsql/client": "C:\\Users\\Oyewo\\OneDrive\\Desktop\\HNG-AIagent\\node_modules\\@mastra\\libsql\\dist\\index.js"
-  }
-}
+{}

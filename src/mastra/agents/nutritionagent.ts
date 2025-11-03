@@ -3,7 +3,7 @@ import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
 import { foodInfoTool } from '../tools/food-info-tool';
 import { join } from 'path';
-
+//path
 const nutritionAgent = new Agent({
   name: 'Nutrition Agent',
   instructions: `
