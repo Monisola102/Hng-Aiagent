@@ -1,4 +1,6 @@
-import { createTool } from "@mastra/core/tools";
+import * as MastraTools from "@mastra/core/tools";
+const { createTool } = MastraTools;
+
 import { z } from "zod";
 import { settings } from "../config/settings";
 
@@ -64,19 +66,19 @@ export const foodInfoTool = createTool({
 
     const food = searchData.foods[0];
     const nutrients = food.foodNutrients || [];
+
     const calories =
       nutrients.find((n) => n.nutrientName.toLowerCase().includes("energy"))?.value || 0;
     const protein =
       (nutrients.find((n) => n.nutrientName.toLowerCase().includes("protein"))?.value || 0) +
       " g";
     const fat =
-      (nutrients.find((n) => n.nutrientName.toLowerCase().includes("total lipid"))?.value ||
-        0) + " g";
+      (nutrients.find((n) => n.nutrientName.toLowerCase().includes("total lipid"))?.value || 0) +
+      " g";
     const carbs =
       (nutrients.find((n) => n.nutrientName.toLowerCase().includes("carbohydrate"))?.value ||
         0) + " g";
 
-    // Step 3: extract vitamins & minerals
     const vitamins = nutrients
       .filter((n) => n.nutrientName.startsWith("Vitamin"))
       .map((v) => `${v.nutrientName}: ${v.value}${v.unitName}`);
@@ -88,9 +90,9 @@ export const foodInfoTool = createTool({
         )
       )
       .map((m) => `${m.nutrientName}: ${m.value}${m.unitName}`);
+
     const healthBenefits: string[] = [];
-    if (calories < 50)
-      healthBenefits.push("Low in calories, good for weight management");
+    if (calories < 50) healthBenefits.push("Low in calories, good for weight management");
     if (vitamins.find((v) => v.includes("Vitamin C")))
       healthBenefits.push("Rich in Vitamin C, supports immune system");
     if (minerals.find((m) => m.includes("Potassium")))
